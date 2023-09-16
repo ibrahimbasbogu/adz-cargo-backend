@@ -3,8 +3,11 @@
 namespace App\Repository;
 
 use App\Entity\UserShipment;
+use App\Service\CaseConvertService;
+use App\Service\PaginatorService;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * @extends ServiceEntityRepository<UserShipment>
@@ -39,28 +42,41 @@ class UserShipmentRepository extends ServiceEntityRepository
         }
     }
 
-//    /**
-//     * @return UserShipment[] Returns an array of UserShipment objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('u')
-//            ->andWhere('u.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('u.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+    public function findByRequest(Request $request): PaginatorService
+    {
+        $page = $request->get('page', 1);
+        $perPage = $request->get('per_page', 25);
+        $sortBy = CaseConvertService::snakeToCamel($request->get('sort_by', 'id'));
+        $sortOrder = $request->get('sort_order', 'ASC');
+        $userId = $request->get('user_id', null);
+        $id = $request->get('id', null);
 
-//    public function findOneBySomeField($value): ?UserShipment
-//    {
-//        return $this->createQueryBuilder('u')
-//            ->andWhere('u.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+        $paginator = new PaginatorService();
+        $query = $this->createQueryBuilder('userShipment');
+
+        if ($id) {
+            $query->andWhere('userShipment.id = :id')
+                ->setParameter('id', $id);
+        }
+
+        if ($userId){
+            $query->leftJoin('userShipment.user', 'user')
+                ->andWhere('user.id = :userId')
+                ->setParameter('userId', $userId);
+        }
+
+        $paginator->setCurrentPage($page)
+            ->setQueryBuilder($query)
+            ->setPerPage($perPage);
+
+        $items = $query->orderBy('userShipment.'.$sortBy, $sortOrder)
+            ->setFirstResult($paginator->getFirstResult())
+            ->setMaxResults($paginator->getPerPage())
+            ->getQuery()
+            ->getResult();
+
+        $paginator->setResult($items);
+
+        return $paginator;
+    }
 }

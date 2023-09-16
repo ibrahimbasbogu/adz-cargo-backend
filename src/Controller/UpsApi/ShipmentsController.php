@@ -16,7 +16,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class ShipmentsController extends MainController
 {
     #[Route('/api/user/shipments', name: 'app_api_user_shipment', methods: ['GET'])]
-    public function index(Request $request, UserRepository $userRepository): JsonResponse
+    public function index(Request $request, UserShipmentRepository $userShipmentRepository): JsonResponse
     {
         /** @var User $user */
         $user = $this->getUser();
@@ -25,10 +25,14 @@ class ShipmentsController extends MainController
             $request->query->set('user_id', $user->getId());
         }
 
-        $items = $userRepository;
+        $items = $userShipmentRepository->findByRequest($request);
+
+        $response = $this->serializer->serialize($items, 'json');
+
+        return new JsonResponse($response, 200, [], true);
     }
 
-    #[Route('/api/user/shipments', name: 'app_api_user_shipment', methods: ['POST'])]
+    #[Route('/api/user/shipments', name: 'app_api_user_shipment_store', methods: ['POST'])]
     public function store(Request $request, UserShipmentRepository $userShipmentRepository): JsonResponse
     {
         $user = $this->getUser();
@@ -104,6 +108,8 @@ class ShipmentsController extends MainController
         $trackingNumber = $shipmentResult['PackageResults']['TrackingNumber'];
 
         $obj = new UserShipment();
+
+        $shipmentResult['ShipmentDescription'] = $shipmentData['Description'];
 
         $obj->setUser($user)
             ->setShipFrom($shipmentRequestData['ShipFrom'])
