@@ -101,6 +101,10 @@ class ShipmentsController extends MainController
 
         $response = UpsHelper::post('/api/shipments/v1/ship', $body, $request->query->all(), $headers);
 
+        if ($response->getStatusCode() != 200){
+            return $response;
+        }
+
         $responseContent = json_decode($response->getContent(), true);
 
         $shipmentResult = $responseContent['ShipmentResponse']['ShipmentResults'];
